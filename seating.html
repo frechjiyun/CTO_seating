@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>좌석 배치도 — 인공지능반도체 연구</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f7f6f3;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd6;--border2:#ccc8bf;
+  --text:#1a1916;--text2:#6b6760;--text3:#9e9a94;
+  --green-bg:#e8f5ee;--green-bd:#a8d5b8;--green-tx:#1e7040;
+  --blue-bg:#e8f0fb;--blue-bd:#a8c0e8;--blue-tx:#1a4a8a;
+  --red-bg:#fdecea;--red-bd:#f0b8b2;--red-tx:#a02020;
+  --amber-bg:#fef8e8;--amber-bd:#e8d090;--amber-tx:#7a5a10;
+  --drop-bg:#fff8e8;--drop-bd:#c8a96e;
+  --accent:#c8a96e;--radius:8px;--radius-lg:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1a1916;--surface:#242320;--surface2:#2e2c28;--border:#3a3830;--border2:#4a4840;
+  --text:#f0ede8;--text2:#a09c96;--text3:#706c66;
+  --green-bg:#0f2a1a;--green-bd:#1e5030;--green-tx:#6fd098;
+  --blue-bg:#0f1e38;--blue-bd:#1e3a60;--blue-tx:#80b0f0;
+  --red-bg:#2a1010;--red-bd:#502020;--red-tx:#f08080;
+  --amber-bg:#281e08;--amber-bd:#503808;--amber-tx:#e0b860;
+  --drop-bg:#2a2410;--drop-bd:#c8a96e;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;user-select:none}
+.page{max-width:1100px;margin:0 auto;padding:2rem 1.25rem 4rem}
+
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;gap:16px;flex-wrap:wrap}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.header p{font-size:13px;color:var(--text2);margin-top:4px}
+.pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;border:1px solid}
+.pill-admin{background:var(--amber-bg);color:var(--amber-tx);border-color:var(--amber-bd)}
+.pill-student{background:var(--blue-bg);color:var(--blue-tx);border-color:var(--blue-bd)}
+.pill-closed{background:var(--red-bg);color:var(--red-tx);border-color:var(--red-bd)}
+
+.info-bar{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:1.25rem;gap:24px;flex-wrap:wrap;font-size:13px;color:var(--text2);box-shadow:var(--shadow)}
+.info-bar.show{display:flex}
+.info-bar strong{color:var(--text);font-weight:500}
+.board{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center;font-size:12px;color:var(--text3);margin-bottom:1.25rem;font-weight:500;letter-spacing:.06em}
+.banner{display:none;border-radius:var(--radius);padding:12px 16px;margin-bottom:1.25rem;font-size:13px;font-weight:500;text-align:center}
+.banner.show{display:block}
+.banner-closed{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red-tx)}
+.banner-sync{background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue-tx)}
+.my-seat{display:none;background:var(--blue-bg);border:1px solid var(--blue-bd);border-radius:var(--radius);padding:10px 14px;margin-bottom:1rem;font-size:13px;color:var(--blue-tx)}
+.my-seat.show{display:block}
+
+.main-layout{display:flex;gap:20px;align-items:flex-start;margin-bottom:1.25rem}
+.seat-area{flex:1;min-width:0}
+
+/* 명단 패널 */
+.roster-panel{width:136px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:20px}
+.roster-header{padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between}
+.roster-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:700}
+.roster-hint{font-size:10px;color:var(--text3);padding:5px 12px;border-bottom:1px solid var(--border);background:var(--surface)}
+.roster-list{max-height:580px;overflow-y:auto;padding:4px 0}
+.roster-list::-webkit-scrollbar{width:3px}
+.roster-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.roster-item{padding:6px 10px;font-size:12px;color:var(--text);transition:all .15s;line-height:1.4;border-left:2px solid transparent;display:flex;align-items:center;gap:5px}
+.roster-item .drag-handle{font-size:10px;color:var(--text3);flex-shrink:0}
+/* 강사: 착석자도 드래그 가능 → 이동용 */
+.roster-item.draggable-admin{cursor:grab}
+.roster-item.draggable-admin:hover{background:var(--surface2);border-left-color:var(--accent)}
+/* 학생: 미착석만 드래그 */
+.roster-item.draggable-student{cursor:grab}
+.roster-item.draggable-student:hover{background:var(--surface2);border-left-color:var(--accent)}
+.roster-item.dragging{opacity:.35;cursor:grabbing}
+.roster-item.present{color:var(--text3);text-decoration:line-through;background:var(--surface2);border-left-color:var(--green-bd)}
+.roster-item.present .drag-handle{color:var(--green-tx)}
+.roster-item.mine-name{color:var(--blue-tx);font-weight:500;background:var(--blue-bg);border-left-color:var(--blue-bd)}
+/* 강사: 착석자도 드래그 가능 표시 */
+.admin-mode .roster-item.present{cursor:grab;text-decoration:line-through}
+.admin-mode .roster-item.present:hover{background:var(--amber-bg);border-left-color:var(--amber-bd)}
+
+/* 좌석 */
+.classroom{display:flex;gap:14px;justify-content:flex-start;overflow-x:auto;padding-bottom:8px}
+.block{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+.block-label{font-size:11px;color:var(--text3);text-align:center;margin-bottom:4px;font-weight:700;letter-spacing:.08em}
+.row-grp{display:flex;gap:5px}
+.seat{width:64px;height:68px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color .12s,background .12s,transform .08s,box-shadow .12s;padding:4px;flex-shrink:0;box-shadow:var(--shadow)}
+.seat:hover:not(.locked){border-color:var(--border2);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.seat.taken{background:var(--green-bg);border-color:var(--green-bd)}
+.seat.mine{background:var(--blue-bg);border-color:var(--blue-bd)}
+.seat.locked{cursor:default}
+.seat.drag-over{background:var(--drop-bg)!important;border:2px dashed var(--drop-bd)!important;transform:scale(1.06)!important;box-shadow:var(--shadow-md)!important}
+.seat-num{font-size:9px;color:var(--text3);margin-bottom:3px;font-family:'JetBrains Mono',monospace;font-weight:500}
+.seat.taken .seat-num{color:var(--green-tx);opacity:.7}
+.seat.mine .seat-num{color:var(--blue-tx);opacity:.7}
+.seat-name{font-size:11px;font-weight:500;text-align:center;line-height:1.3;word-break:keep-all}
+.seat.taken .seat-name{color:var(--green-tx)}
+.seat.mine .seat-name{color:var(--blue-tx)}
+.seat-icon{font-size:18px;color:var(--border2);transition:color .15s}
+.seat-time{font-size:9px;color:var(--text3);margin-top:1px;font-family:'JetBrains Mono',monospace}
+.seat.taken .seat-time{color:var(--green-tx);opacity:.7}
+.seat.mine .seat-time{color:var(--blue-tx);opacity:.8}
+.aisle{width:1px;background:var(--border);margin:20px 0;align-self:stretch;flex-shrink:0}
+
+.drag-ghost{position:fixed;pointer-events:none;z-index:999;background:var(--surface);border:2px solid var(--accent);border-radius:var(--radius);padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);box-shadow:var(--shadow-md);white-space:nowrap;transform:translate(-50%,-60%);display:none}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center;box-shadow:var(--shadow)}
+.stat-val{font-size:26px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:4px;font-weight:500;letter-spacing:.04em}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--text2);align-items:center;margin-bottom:2rem;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;border:1px solid var(--border2);vertical-align:middle}
+.divider{height:1px;background:var(--border);margin:2rem 0}
+.sec-title{font-size:15px;font-weight:700;color:var(--text);margin:0 0 1.25rem;display:flex;align-items:center;gap:8px}
+.field-row{display:flex;gap:10px;align-items:center;margin-bottom:.75rem;flex-wrap:wrap}
+.field-row label{font-size:13px;color:var(--text2);white-space:nowrap;min-width:36px;font-weight:500}
+.field-row input{flex:1;min-width:180px;padding:9px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none;font-family:'Noto Sans KR',sans-serif;transition:border-color .12s}
+.field-row input:focus{border-color:var(--accent)}
+.btn-row{display:flex;gap:8px;margin-top:.75rem;flex-wrap:wrap}
+.btn{padding:9px 18px;font-size:13px;font-weight:500;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-family:'Noto Sans KR',sans-serif;transition:all .12s;box-shadow:var(--shadow)}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn.primary:hover{opacity:.85}
+.btn.danger{color:var(--red-tx);border-color:var(--red-bd);background:var(--red-bg)}
+.btn.danger:hover{opacity:.85}
+.btn.full{width:100%;justify-content:center}
+.url-box{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);word-break:break-all;margin:.75rem 0;line-height:1.7}
+.url-box.show{display:block}
+.result-card{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-top:1.25rem;box-shadow:var(--shadow-md)}
+.result-card.show{display:block}
+.result-card pre{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);white-space:pre-wrap;margin:0 0 1rem;line-height:1.9;border-left:3px solid var(--accent);padding-left:14px}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(2px)}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;width:320px;max-width:100%;box-shadow:var(--shadow-md)}
+.modal h3{font-size:16px;font-weight:700;color:var(--text);margin:0 0 .5rem}
+.modal p{font-size:13px;color:var(--text2);margin:0 0 1rem}
+.modal input{width:100%;padding:10px 12px;font-size:15px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;font-family:'Noto Sans KR',sans-serif;margin-bottom:1rem;transition:border-color .12s}
+.modal input:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.mbtn{padding:8px 16px;font-size:13px;font-weight:500;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background .12s}
+.mbtn:hover{background:var(--surface2)}
+.mbtn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.mbtn.primary:hover{opacity:.85}
+.mbtn.danger{color:var(--red-tx);border-color:var(--red-bd)}
+.mbtn.danger:hover{background:var(--red-bg)}
+
+@media(max-width:700px){
+  .main-layout{flex-direction:column}
+  .roster-panel{width:100%;position:static}
+  .roster-list{display:flex;flex-wrap:wrap;gap:4px;padding:8px;max-height:130px}
+  .roster-item{padding:3px 8px;border-radius:20px;border-left:none;border:1px solid var(--border);font-size:11px}
+  .roster-item .drag-handle{display:none}
+  .roster-item.present{border-color:var(--green-bd)}
+  .seat{width:52px;height:50px}
+  .seat-num{font-size:8px}
+  .seat-name{font-size:10px}
+  .stat-val{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="drag-ghost" id="drag-ghost"></div>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <h1>🪑 좌석 배치도</h1>
+      <p>인공지능반도체 연구 — M3673.000300</p>
+    </div>
+    <span class="pill" id="mode-badge">연결 중…</span>
+  </div>
+
+  <div class="banner banner-closed" id="closed-banner">🔒 수업이 종료되었습니다. 좌석 입력이 마감되었습니다.</div>
+  <div class="banner banner-sync" id="sync-banner">⏳ 데이터 동기화 중…</div>
+
+  <div class="info-bar" id="info-bar">
+    <span>📅 <strong id="ib-date"></strong></span>
+    <span>CTO <strong id="ib-cto"></strong></span>
+  </div>
+
+  <div class="board">▲ 강의 화면 / 칠판</div>
+  <div class="my-seat" id="my-seat"></div>
+
+  <div class="main-layout">
+    <div class="seat-area">
+      <div class="classroom" id="classroom"></div>
+    </div>
+    <div class="roster-panel" id="roster-panel">
+      <div class="roster-header">
+        수강생 명단 <span class="roster-count" id="roster-count">0/72</span>
+      </div>
+      <div class="roster-hint" id="roster-hint">✋ 드래그 → 좌석</div>
+      <div class="roster-list" id="roster-list"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="s-total">72</div><div class="stat-lbl">전체 수강생</div></div>
+    <div class="stat"><div class="stat-val" id="s-taken">0</div><div class="stat-lbl">착석</div></div>
+    <div class="stat"><div class="stat-val" id="s-absent">72</div><div class="stat-lbl">결석 추정</div></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot"></span>빈 자리 (클릭 입력)</span>
+    <span><span class="dot" style="background:var(--green-bg);border-color:var(--green-bd)"></span>착석</span>
+    <span id="legend-mine"><span class="dot" style="background:var(--blue-bg);border-color:var(--blue-bd)"></span>내 자리</span>
+    <span style="color:var(--accent)">✋ 명단 드래그 가능</span>
+  </div>
+
+  <div id="panel-student" style="display:none"></div>
+
+  <div id="panel-admin" style="display:none">
+    <div class="divider"></div>
+    <p class="sec-title">⚙️ 강사 설정</p>
+    <div class="field-row"><label>날짜</label><input type="text" id="a-date" placeholder="예: 5월 22일"/></div>
+    <div class="field-row"><label>CTO</label><input type="text" id="a-cto" placeholder="예: 엑시나 김주현"/></div>
+    <div class="btn-row">
+      <button class="btn primary" id="btn-save">💾 저장 &amp; 학생 URL 생성</button>
+      <button class="btn" id="btn-reset">🔄 좌석 초기화</button>
+    </div>
+    <div class="url-box" id="url-box"></div>
+    <div class="btn-row" id="url-btn-row" style="display:none">
+      <button class="btn" id="btn-copy-url">📋 학생 URL 복사</button>
+    </div>
+    <div class="divider"></div>
+    <button class="btn danger full" id="btn-close">🔒 수업 마감 &amp; 출결 정리 생성</button>
+    <div class="result-card" id="result-card">
+      <pre id="result-text"></pre>
+      <button class="btn" id="btn-copy-report">📋 출결 복사</button>
+    </div>
+  </div>
+
+  <div id="panel-student-result" style="display:none">
+    <div class="divider"></div>
+    <div class="result-card show"><pre id="student-result-text"></pre></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modal-title">자리 선택</h3>
+    <p id="modal-desc"></p>
+    <input type="text" id="name-input" placeholder="이름을 입력하세요" maxlength="10" autocomplete="off"/>
+    <div class="modal-btns">
+      <button class="mbtn" id="btn-cancel">취소</button>
+      <button class="mbtn danger" id="btn-clear" style="display:none">비우기</button>
+      <button class="mbtn primary" id="btn-confirm">앉기</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, remove }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyCYaRy4l6rYgs4sMNpQyBCvjtlDTCo9Bpc",
+  authDomain:"my-seat-in-cto-class.firebaseapp.com",
+  databaseURL:"https://my-seat-in-cto-class-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"my-seat-in-cto-class",
+  storageBucket:"my-seat-in-cto-class.firebasestorage.app",
+  messagingSenderId:"469586716464",
+  appId:"1:469586716464:web:d5749f5e5d1583b6494af5"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getDatabase(app);
+const seatsRef=ref(db,'seats');
+const metaRef=ref(db,'meta');
+const closedRef=ref(db,'closed');
+
+const BLOCKS=4,COLS=3,ROWS=9;
+const ROSTER=["백강현","장재원","이지원","이상엽","김홍주","권용모","정원준","이정후","조형찬","변지은","한지수","성여현","김서영","김성현","박시안","정성호","하인주","서동범","백한비","김석진","박준범","강나현","박대민","임헌성","현시은","정문석","김희연","정민기","김철민","고정민","박경수","김동하","이태호","김정훈","김도근","서하연","김진혁","김지훈","최성우","김우규","박재선","이재정","한대용","김준영","김용엽","박채연","김명주","정승연","이동현","유지용","강동훈","유승훈","정진혁","김대훈","이동영","제현우","홍정욱","채가은","박철진","김홍득","이서준","정요섭","노민영","이하준","양다원","이준용","주동국","오하영","홍찬양","한승우","백필성","김병준"];
+
+let seats={},meta={date:'',cto:''},isClosed=false,isAdmin=false,targetSeat=null;
+const myKey='cto_my_seat';
+let mySeat=localStorage.getItem(myKey)||null;
+let dragName=null;
+const ghost=document.getElementById('drag-ghost');
+
+const norm=s=>s.replace(/\s+/g,'').toLowerCase();
+const getName=v=>v?(typeof v==='object'?v.name:v):'';
+const getTime=v=>v?(typeof v==='object'?v.time:''):'';
+const fmtTime=v=>{if(!v)return '';const d=new Date(v);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');};
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const sid=(b,c,r)=>`${b}-${c}-${r}`;
+
+isAdmin=new URLSearchParams(window.location.search).get('mode')==='admin';
+
+// 강사 모드: 파란 자리 없음 → legend 내 자리 항목 숨김
+if(isAdmin) document.getElementById('legend-mine').style.display='none';
+
+// 강사 모드면 명단 패널에 클래스 추가
+if(isAdmin) document.getElementById('roster-panel').classList.add('admin-mode');
+
+onValue(metaRef,snap=>{
+  meta=snap.val()||{date:'',cto:''};
+  if(meta.date||meta.cto){
+    document.getElementById('info-bar').className='info-bar show';
+    document.getElementById('ib-date').textContent=meta.date;
+    document.getElementById('ib-cto').textContent=meta.cto;
+  }
+  if(isAdmin){
+    document.getElementById('a-date').value=meta.date||'';
+    document.getElementById('a-cto').value=meta.cto||'';
+  }
+});
+
+onValue(closedRef,snap=>{
+  isClosed=snap.val()===true;
+  const badge=document.getElementById('mode-badge');
+  if(isClosed){
+    badge.textContent='마감됨';badge.className='pill pill-closed';
+    document.getElementById('closed-banner').className='banner banner-closed show';
+    document.getElementById('panel-student').style.display='none';
+    if(!isAdmin){
+      document.getElementById('panel-student-result').style.display='block';
+      document.getElementById('student-result-text').textContent=buildReport();
+    }
+    if(isAdmin) showAdminReport();
+  } else {
+    badge.textContent=isAdmin?'강사 모드':'학생 모드';
+    badge.className=isAdmin?'pill pill-admin':'pill pill-student';
+  }
+});
+
+onValue(seatsRef,snap=>{
+  seats=snap.val()||{};
+  document.getElementById('sync-banner').style.display='none';
+  if(isAdmin) document.getElementById('panel-admin').style.display='block';
+  if(!isAdmin&&!isClosed) document.getElementById('panel-student').style.display='block';
+  render();
+  renderRoster();
+});
+
+// ── 좌석 렌더 ──────────────────────────────────────────────
+function render(){
+  const el=document.getElementById('classroom');
+  el.innerHTML='';
+  let taken=0;
+
+  for(let b=0;b<BLOCKS;b++){
+    const bd=document.createElement('div');bd.className='block';
+    const lbl=document.createElement('div');lbl.className='block-label';
+    lbl.textContent=`${b+1}열`;bd.appendChild(lbl);
+
+    for(let r=0;r<ROWS;r++){
+      const rd=document.createElement('div');rd.className='row-grp';
+      for(let c=0;c<COLS;c++){
+        const id=sid(b+1,c+1,r+1);
+        const name=getName(seats[id]);
+        const timeVal=getTime(seats[id]);
+        const isMe=mySeat===id;
+        if(name) taken++;
+        const s=document.createElement('div');
+        s.className='seat'+(name?' taken':'')+(isMe&&!isAdmin?' mine':'')+(isClosed?' locked':'');
+        const num=r*COLS+c+1;
+        const showName = isAdmin || isMe;
+        const takenByOther = !isAdmin && !isMe && name;
+        const showTime = (isAdmin || isMe) && timeVal;
+        s.innerHTML=`<span class="seat-num">${b+1}-${num}</span>`
+          +(showName && name
+            ? `<span class="seat-name">${esc(name)}</span>${showTime?`<span class="seat-time">${fmtTime(timeVal)}</span>`:''}`
+          : takenByOther
+            ? `<span class="seat-name" style="font-size:10px;opacity:.6">착석</span>`
+          : `<span class="seat-icon">⊡</span>`);
+
+        if(!isClosed){
+          // 클릭 입력
+          s.addEventListener('click',()=>openModal(id,name,isMe,b+1,num));
+
+          // 드롭 수신
+          s.addEventListener('dragover',e=>{e.preventDefault();s.classList.add('drag-over');});
+          s.addEventListener('dragleave',()=>s.classList.remove('drag-over'));
+          s.addEventListener('drop',async e=>{
+            e.preventDefault();
+            s.classList.remove('drag-over');
+            if(!dragName) return;
+
+            if(isAdmin){
+              // 강사: 기존 자리에서 이름 제거 후 새 자리 배치
+              const prevSeat=Object.entries(seats).find(([,v])=>norm(getName(v))===norm(dragName));
+              if(prevSeat) await remove(ref(db,`seats/${prevSeat[0]}`));
+              await set(ref(db,`seats/${id}`),{name:dragName,time:Date.now()});
+            } else {
+              // 학생: 내 자리만 이동
+              if(mySeat&&mySeat!==id) await remove(ref(db,`seats/${mySeat}`));
+              await set(ref(db,`seats/${id}`),{name:dragName,time:Date.now()});
+              mySeat=id;localStorage.setItem(myKey,mySeat);
+            }
+            dragName=null;
+          });
+        }
+        rd.appendChild(s);
+      }
+      bd.appendChild(rd);
+    }
+    el.appendChild(bd);
+    if(b<BLOCKS-1){
+      const a=document.createElement('div');a.className='aisle';el.appendChild(a);
+    }
+  }
+
+  document.getElementById('s-total').textContent=ROSTER.length;
+  document.getElementById('s-taken').textContent=taken;
+  document.getElementById('s-absent').textContent=Math.max(0,ROSTER.length-taken);
+
+  const mi=document.getElementById('my-seat');
+  if(!isAdmin&&mySeat&&seats[mySeat]){
+    const p=mySeat.split('-');
+    const num=(+p[2]-1)*COLS+(+p[1]);
+    mi.className='my-seat show';
+    const mn=getName(seats[mySeat]);const mt=fmtTime(getTime(seats[mySeat]));
+    mi.textContent=`📍 내 자리: ${p[0]}열 ${num}번 (${mn}${mt?' · '+mt:''})`;
+  } else {mi.className='my-seat';}
+
+  if(isAdmin&&isClosed) showAdminReport();
+}
+
+// ── 명단 렌더 ──────────────────────────────────────────────
+function renderRoster(){
+  const presentNorms=new Set(Object.values(seats).map(v=>norm(getName(v))));
+  const myName=(mySeat&&seats[mySeat])?norm(getName(seats[mySeat])):null;
+  const taken=presentNorms.size;
+
+  document.getElementById('roster-count').textContent=`${taken}/${ROSTER.length}`;
+
+  // 강사 힌트 업데이트
+  if(isAdmin){
+    document.getElementById('roster-hint').textContent=
+      taken===ROSTER.length?'✅ 전원 착석':'✋ 드래그 → 자유 배치';
+  }
+
+  const list=document.getElementById('roster-list');
+  list.innerHTML='';
+
+  ROSTER.forEach(name=>{
+    const n=norm(name);
+    const isPresent=presentNorms.has(n);
+    const isMe=myName===n;
+
+    const item=document.createElement('div');
+
+    // 강사: 착석 여부 관계없이 항상 드래그 가능
+    // 학생: 미착석만 드래그 가능
+    const canDrag=isAdmin?true:!isPresent;
+
+    item.className='roster-item'
+      +(isPresent?' present':'')
+      +(isMe&&!isAdmin?' mine-name':'')
+      +(canDrag?(isAdmin?' draggable-admin':' draggable-student'):'');
+
+    item.innerHTML=`<span class="drag-handle">${canDrag?'⠿':'✓'}</span>${esc(name)}`;
+
+    if(canDrag&&!isClosed){
+      item.draggable=true;
+      item.addEventListener('dragstart',e=>{
+        dragName=name;
+        item.classList.add('dragging');
+        ghost.textContent=name;
+        ghost.style.display='block';
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setDragImage(new Image(),0,0);
+      });
+      item.addEventListener('dragend',()=>{
+        item.classList.remove('dragging');
+        ghost.style.display='none';
+        dragName=null;
+        document.querySelectorAll('.seat.drag-over').forEach(s=>s.classList.remove('drag-over'));
+      });
+    }
+    list.appendChild(item);
+  });
+}
+
+document.addEventListener('dragover',e=>{
+  ghost.style.left=e.clientX+'px';
+  ghost.style.top=e.clientY+'px';
+});
+
+// ── 출결 정리 ──────────────────────────────────────────────
+function buildReport(){
+  const pNorms=new Set(Object.values(seats).map(v=>norm(getName(v))));
+  const absent=ROSTER.filter(n=>!pNorms.has(norm(n)));
+  const rNorms=new Set(ROSTER.map(n=>norm(n)));
+  const unknown=Object.values(seats).map(v=>getName(v)).filter(n=>n&&!rNorms.has(norm(n)));
+  let t=`날짜 : ${meta.date}\nCTO : ${meta.cto}\n출결 관리 : (결석생 ${absent.length}명)\n${absent.length?absent.join(', '):'없음'}`;
+  if(unknown.length) t+=`\n\n미확인 (명단 외 ${unknown.length}명)\n${unknown.join(', ')}`;
+  return t;
+}
+function showAdminReport(){
+  document.getElementById('result-text').textContent=buildReport();
+  document.getElementById('result-card').className='result-card show';
+}
+
+// ── 강사 버튼 ──────────────────────────────────────────────
+document.getElementById('btn-save').addEventListener('click',async()=>{
+  const d=document.getElementById('a-date').value.trim();
+  const c=document.getElementById('a-cto').value.trim();
+  if(!d||!c){alert('날짜와 CTO를 모두 입력해 주세요.');return;}
+  await set(metaRef,{date:d,cto:c});
+  await set(closedRef,false);
+  const url=new URL(window.location.href);
+  url.searchParams.set('mode','student');
+  document.getElementById('url-box').textContent=url.toString();
+  document.getElementById('url-box').className='url-box show';
+  document.getElementById('url-btn-row').style.display='flex';
+});
+
+document.getElementById('btn-copy-url').addEventListener('click',()=>{
+  navigator.clipboard.writeText(document.getElementById('url-box').textContent).then(()=>{
+    const b=document.getElementById('btn-copy-url');
+    b.textContent='✅ 복사됨!';
+    setTimeout(()=>{b.textContent='📋 학생 URL 복사';},1800);
+  });
+});
+
+document.getElementById('btn-reset').addEventListener('click',async()=>{
+  if(!confirm('좌석을 모두 초기화할까요?')) return;
+  await set(seatsRef,null);
+  await set(closedRef,false);
+  mySeat=null;localStorage.removeItem(myKey);
+  document.getElementById('result-card').className='result-card';
+  document.getElementById('closed-banner').className='banner banner-closed';
+});
+
+document.getElementById('btn-close').addEventListener('click',async()=>{
+  if(!meta.date||!meta.cto){alert('먼저 날짜와 CTO를 저장해 주세요.');return;}
+  if(!confirm('수업을 마감할까요?\n학생들은 더 이상 이름을 입력할 수 없습니다.')) return;
+  await set(closedRef,true);
+});
+
+document.getElementById('btn-copy-report').addEventListener('click',()=>{
+  navigator.clipboard.writeText(document.getElementById('result-text').textContent).then(()=>{
+    const b=document.getElementById('btn-copy-report');
+    b.textContent='✅ 복사됨!';
+    setTimeout(()=>{b.textContent='📋 출결 복사';},1800);
+  });
+});
+
+document.getElementById('btn-student-done').addEventListener('click',()=>{
+  if(!mySeat){alert('먼저 자리를 선택해 주세요!');return;}
+  alert(`${seats[mySeat]}님, 착석 완료되었습니다! ✅`);
+});
+
+// ── 클릭 모달 ──────────────────────────────────────────────
+function openModal(id,currentName,isMe,block,num){
+  targetSeat=id;
+  document.getElementById('modal-title').textContent=`${block}열 ${num}번 자리`;
+  document.getElementById('modal-desc').textContent=currentName?`현재: ${currentName}`:'빈 자리입니다.';
+  const inp=document.getElementById('name-input');
+  inp.value=currentName||'';
+  document.getElementById('btn-clear').style.display=currentName?'':'none';
+  document.getElementById('btn-confirm').textContent=currentName?'수정하기':'앉기';
+  document.getElementById('overlay').className='overlay open';
+  setTimeout(()=>inp.focus(),50);
+}
+function closeModal(){document.getElementById('overlay').className='overlay';targetSeat=null;}
+document.getElementById('btn-cancel').addEventListener('click',closeModal);
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('btn-confirm').addEventListener('click',async()=>{
+  const name=document.getElementById('name-input').value.trim();
+  if(!name) return;
+  if(!isAdmin){
+    if(mySeat&&mySeat!==targetSeat) await remove(ref(db,`seats/${mySeat}`));
+    mySeat=targetSeat;localStorage.setItem(myKey,mySeat);
+  }
+  await set(ref(db,`seats/${targetSeat}`),{name,time:Date.now()});
+  closeModal();
+});
+document.getElementById('btn-clear').addEventListener('click',async()=>{
+  await remove(ref(db,`seats/${targetSeat}`));
+  if(mySeat===targetSeat){mySeat=null;localStorage.removeItem(myKey);}
+  closeModal();
+});
+document.getElementById('name-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter') document.getElementById('btn-confirm').click();
+  if(e.key==='Escape') closeModal();
+});
+</script>
+</body>
+</html>
