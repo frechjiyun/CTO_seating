@@ -10,7 +10,7 @@ Firebase 실시간 DB 기반 강의실 좌석 배치 & 출결 관리 웹앱입�
 
 1. URL 뒤에 `?mode=admin` 붙여서 접속
    ```
-   https://your-url/index.html?mode=admin
+   https://frechjiyun.github.io/CTO_seating/?mode=admin
    ```
 2. 하단 **강사 설정** 패널에서 날짜, 요일, 시작/종료 시간, CTO 입력
 3. **💾 저장 & 학생 URL 생성** 버튼 클릭
