@@ -242,7 +242,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="stat"><div class="stat-val" id="s-absent">0</div><div class="stat-lbl">결석 추정</div></div>
   </div>
 
-  <div class="result-card" id="result-card" style="margin-bottom:1.25rem">
+  <div class="result-card" id="result-card" style="margin-bottom:1.25rem;border:2.5px solid #e67e22;">
+    <div style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:.75rem;letter-spacing:.04em">🔒 강사 공개 — 출결 정리</div>
     <pre id="result-text"></pre>
     <button class="btn" id="btn-copy-report">📋 출결 복사</button>
   </div>
@@ -273,7 +274,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
   <div id="panel-student-result" style="display:none">
     <div class="divider"></div>
-    <div class="result-card show"><pre id="student-result-text"></pre></div>
+    <div class="result-card show" style="border:2.5px solid #27ae60;">
+      <div style="font-size:12px;font-weight:700;color:#27ae60;margin-bottom:.75rem;letter-spacing:.04em">👨‍🎓 학생 공개 — 출결 정리</div>
+      <pre id="student-result-text"></pre>
+    </div>
   </div>
 </div>
 
@@ -837,10 +841,10 @@ function buildReport(){
     if(s==='absent') absentByTime.push(n);
   });
   const classTimeStr=meta.classTime||'';
-  let t=`날짜 : ${meta.date}${classTimeStr?' ('+classTimeStr+')':''}\nCTO : ${meta.cto}\n출결 관리 : (결석생 ${absent.length}명)\n${absent.length?absent.join(', '):'없음'}`;
-  if(late.length) t+=`\n\n⏰ 지각 (${late.length}명)\n${late.join(', ')}`;
-  if(absentByTime.length) t+=`\n\n❌ 늦은 결석 처리 (${absentByTime.length}명)\n${absentByTime.join(', ')}`;
-  if(unknown.length) t+=`\n\n미확인 (명단 외 ${unknown.length}명)\n${unknown.join(', ')}`;
+  let t=`날짜 : ${meta.date}${classTimeStr?' ('+classTimeStr+')':''}\nCTO : ${meta.cto}\n출결 관리 : (결석생 ${absent.length}명)\n${absent.length?absent.sort((a,b)=>a.localeCompare(b,'ko')).join(', '):'없음'}`;
+  if(late.length) t+=`\n\n⏰ 지각 (${late.length}명)\n${late.sort((a,b)=>a.localeCompare(b,'ko')).join(', ')}`;
+  if(absentByTime.length) t+=`\n\n❌ 늦은 결석 처리 (${absentByTime.length}명)\n${absentByTime.sort((a,b)=>a.localeCompare(b,'ko')).join(', ')}`;
+  if(unknown.length) t+=`\n\n미확인 (명단 외 ${unknown.length}명)\n${unknown.sort((a,b)=>a.localeCompare(b,'ko')).join(', ')}`;
   const memo=document.getElementById('memo-input')?.value?.trim();
   if(memo) t+=`\n\n📝 메모\n${memo}`;
   return t;
