@@ -1,4 +1,4 @@
-# 🪑 CTO Seating — 강의실 좌석 배치 & 출결 관리
+# 🪑 CEO/CTO Class Seating — 강의실 좌석 배치 & 출결 관리
 
 실시간 강의실 좌석 배치도 및 출결 관리 웹앱입니다.  
 Firebase Realtime Database 기반으로 여러 학생이 동시에 접속해 착석할 수 있습니다.
